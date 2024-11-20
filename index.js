@@ -42,8 +42,58 @@ app.use(express.static(path.join(__dirname, "/public/js")));
 app.use(express.static(path.join(__dirname, "/public/stuffs")));
 
 app.get('/', checkAuthenticated, (req, res) => {
-  res.render('page1.ejs', { name: req.user.name });
+
+  const name = req.name;
+  const query = 'SELECT * FROM modules';
+  
+  db.query(query, (err, results) => {
+      if (err) {
+          console.error('Error fetching data from modules table:', err);
+          return res.status(500).send('Internal Server Error');
+      }
+      // console.log(results[0]);
+      
+      // Pass the fetched data to the index.ejs template
+      res.render("page1.ejs", { modules: results, name:name});
+  });
 });
+
+app.get('/new_mod',checkAuthenticated,(req,res)=>{
+  res.render("new_mod.ejs");
+})
+
+const { v4: uuidv4 } = require('uuid'); // Import UUID
+const { name } = require('ejs');
+
+app.post('/mod', checkAuthenticated, (req, res, next) => {
+  // console.log("heello");
+  try {
+      const { module_name } = req.body;
+
+      // Generate a unique UUID for mod_id
+      const mod_id = uuidv4();
+
+      // Insert into the modules table using db.query
+      const q = 'INSERT INTO modules (mod_id, module) VALUES (?, ?)';
+      const values = [mod_id, module_name];
+      // console.log(module_name);
+
+      db.query(q, values, (err, result) => {
+          if (err) {
+              console.error('Error adding module:', err);
+              return next(err);
+          }
+          // Redirect to the homepage on successful insert
+          res.redirect('/');
+      });
+  } catch (error) {
+      console.error('Unexpected error:', error);
+      next(error);
+  }
+});
+
+
+
 
 app.get('/login', checkNotAuthenticated, (req, res) => {
   res.render('login.ejs');
@@ -60,33 +110,11 @@ app.post('/login', checkNotAuthenticated, (req, res, next) => {
 }));
 
 
-// app.get('/register', checkNotAuthenticated, (req, res) => {
-//   res.render('register.ejs');
-// });
-
-// app.post('/register', checkNotAuthenticated, async (req, res) => {
-//   try {
-//     const hashedPassword = await bcrypt.hash(req.body.password, 10);
-    
-//     // Insert new user into the database
-//     const query = 'INSERT INTO admin (name, email, password) VALUES (?, ?, ?)';
-//     db.query(query, [req.body.name, req.body.email, hashedPassword], (err) => {
-//       if (err) {
-//         console.error('Error inserting user into the database:', err);
-//         return res.redirect('/register');
-//       }
-//       res.redirect('/login');
-//     });
-//   } catch (err) {
-//     console.error('Error during registration:', err);
-//     res.redirect('/register');
-//   }
-// });
 
 app.delete('/logout', (req, res) => {
   req.logOut((err) => {
     if (err) {
-      return next(err); // Handle the error if there's one
+      return next(err);
     }
     res.redirect('/login');
   });

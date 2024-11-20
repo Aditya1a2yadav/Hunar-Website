@@ -5,6 +5,7 @@ const mysql = require("mysql2");
 function initialize(passport, getUserByEmail, getUserById) {
   const authenticateUser = (email, password, done) => {
     const query = 'SELECT * FROM admin WHERE email = ?';
+    // console.log("yaha____")
     
     db.query(query, [email], (err, results) => {
       if (err) return done(err);
@@ -17,6 +18,7 @@ function initialize(passport, getUserByEmail, getUserById) {
 
       try {
         if (password === user.password) {
+
           return done(null, user);
         } else {
           return done(null, false, { message: 'Password incorrect' });

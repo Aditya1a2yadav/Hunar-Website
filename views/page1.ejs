@@ -1,2 +1,32 @@
-HEllo Admin <% name %>
-<form action="/logout?_method=DELETE" method="post"><button type="submit">logout</button></form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Modules</title>
+    <link rel="stylesheet" href="page1.css">
+</head>
+<body>
+    Hello <%= name %>
+    <form action="/logout?_method=DELETE" method="mod"><button type="submit">Logout</button></form>
+    <% if (modules.length === 0) { %>
+        <p>No modules found.</p>
+    <% } else { %>
+        <% for(mod of modules) {%>
+            <div class="mod">
+                <h4 class="content"> <a> <%= mod.module %> </a> </h4>
+                <form method="mod" action="/mod/<%= mod.id %>?_method=DELETE">
+                    <button>Delete Module</button>
+                </form>
+            </div>
+            <% } %>
+    <% } %>
+        <br>
+        <form action="/new_mod" method="get">
+            <button type="submit">Create new Module</button>
+         </form>
+</body>
+</html>
+
+
+
