@@ -10,7 +10,7 @@ const flash = require('express-flash');
 const session = require('express-session');
 const methodOverride = require('method-override');
 const mysql = require("mysql2");
-const path=require('path');
+const path = require('path');
 
 const initializePassport = require('./passport-config');
 initializePassport(passport);
@@ -45,20 +45,20 @@ app.get('/', checkAuthenticated, (req, res) => {
 
   const name = req.name;
   const query = 'SELECT * FROM modules';
-  
+
   db.query(query, (err, results) => {
-      if (err) {
-          console.error('Error fetching data from modules table:', err);
-          return res.status(500).send('Internal Server Error');
-      }
-      // console.log(results[0]);
-      
-      // Pass the fetched data to the index.ejs template
-      res.render("page1.ejs", { modules: results, name:name});
+    if (err) {
+      console.error('Error fetching data from modules table:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    // console.log(results[0]);
+
+    // Pass the fetched data to the index.ejs template
+    res.render("page1.ejs", { modules: results, name: name });
   });
 });
 
-app.get('/new_mod',checkAuthenticated,(req,res)=>{
+app.get('/new_mod', checkAuthenticated, (req, res) => {
   res.render("new_mod.ejs");
 })
 
@@ -66,32 +66,157 @@ const { v4: uuidv4 } = require('uuid'); // Import UUID
 const { name } = require('ejs');
 
 app.post('/mod', checkAuthenticated, (req, res, next) => {
-  // console.log("heello");
   try {
-      const { module_name } = req.body;
+    const { module_name } = req.body;
 
-      // Generate a unique UUID for mod_id
-      const mod_id = uuidv4();
+    // Generate a unique UUID for mod_id
+    const mod_id = uuidv4();
 
-      // Insert into the modules table using db.query
-      const q = 'INSERT INTO modules (mod_id, module) VALUES (?, ?)';
-      const values = [mod_id, module_name];
-      // console.log(module_name);
+    // Insert into the modules table
+    const insertModuleQuery = 'INSERT INTO modules (mod_id, module) VALUES (?, ?)';
+    const insertValues = [mod_id, module_name];
 
-      db.query(q, values, (err, result) => {
-          if (err) {
-              console.error('Error adding module:', err);
-              return next(err);
-          }
-          // Redirect to the homepage on successful insert
-          res.redirect('/');
+    db.query(insertModuleQuery, insertValues, (err, result) => {
+      if (err) {
+        console.error('Error adding module:', err);
+        return next(err);
+      }
+
+      // Construct the SQL query to create a new table dynamically
+      const createTableQuery = `
+        CREATE TABLE ${db.escapeId(module_name)} (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          question TEXT NOT NULL,
+          option_1 VARCHAR(255),
+          option_2 VARCHAR(255),
+          option_3 VARCHAR(255),
+          option_4 VARCHAR(255),
+          correct_option INT NOT NULL,
+          standard INT NOT NULL,
+          difficulty ENUM('Easy', 'Medium', 'Hard') NOT NULL
+        )
+      `;
+
+      db.query(createTableQuery, (err, result) => {
+        if (err) {
+          console.error('Error creating table:', err);
+          return next(err);
+        }
+
+        console.log(`Table ${module_name} created successfully`);
+        // Redirect to the homepage on successful table creation
+        res.redirect('/');
       });
+    });
   } catch (error) {
-      console.error('Unexpected error:', error);
-      next(error);
+    console.error('Unexpected error:', error);
+    next(error);
   }
 });
 
+app.get('/mod/:id', checkAuthenticated, (req, res, next) => {
+  const { id } = req.params;
+  const getModuleQuery = 'SELECT module FROM modules WHERE mod_id = ?';
+
+  db.query(getModuleQuery, [id], (err, results) => {
+    if (err) {
+      console.error('Error fetching module name:', err);
+      return next(err);
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Module not found');
+    }
+
+    const modulename = results[0].module;
+    const fetchRowsQuery = `SELECT * FROM ${db.escapeId(modulename)}`;
+
+    db.query(fetchRowsQuery, (err, rows) => {
+      if (err) {
+        console.error('Error fetching rows from table:', err);
+        return next(err);
+      }
+      res.render('mod-data.ejs', {
+        modulename,
+        rows,
+        id
+      });
+    });
+  });
+});
+
+app.get('/new_ques/:id', checkAuthenticated, (req, res, next) => {
+  const { id } = req.params;
+  const getModuleQuery = 'SELECT module FROM modules WHERE mod_id = ?';
+
+  db.query(getModuleQuery, [id], (err, results) => {
+    if (err) {
+      console.error('Error fetching module:', err);
+      return next(err);
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Module not found');
+    }
+    const modulename = results[0].module;
+    res.render('new_ques.ejs', { id, modulename });
+  });
+});
+
+app.post('/mod/:id/add_question', checkAuthenticated, (req, res, next) => {
+  const { id } = req.params;
+  const {
+    content,
+    option_1,
+    option_2,
+    option_3,
+    option_4,
+    correct_option,
+    standard,
+    difficulty,
+  } = req.body;
+
+  const getModuleQuery = 'SELECT module FROM modules WHERE mod_id = ?';
+
+  db.query(getModuleQuery, [id], (err, results) => {
+    if (err) {
+      console.error('Error fetching module name:', err);
+      return next(err);
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Module not found');
+    }
+
+    const modulename = results[0].module;
+    const insertQuestionQuery = `
+      INSERT INTO ${db.escapeId(modulename)} 
+      (question, option_1, option_2, option_3, option_4,correct_option, standard, difficulty) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      content,
+      option_1,
+      option_2,
+      option_3,
+      option_4,
+      correct_option,
+      standard,
+      difficulty,
+    ];
+
+    db.query(insertQuestionQuery, values, (err, result) => {
+      if (err) {
+        console.error('Error inserting question:', err);
+        return next(err);
+      }
+
+      console.log('Question added successfully:', result);
+      res.redirect(`/mod/${id}`);
+    });
+  });
+});
 
 
 

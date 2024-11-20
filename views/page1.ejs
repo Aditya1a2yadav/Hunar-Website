@@ -8,16 +8,17 @@
 </head>
 <body>
     Hello <%= name %>
-    <form action="/logout?_method=DELETE" method="mod"><button type="submit">Logout</button></form>
+    <form action="/logout?_method=DELETE" method="post"><button type="submit">Logout</button></form>
     <% if (modules.length === 0) { %>
         <p>No modules found.</p>
     <% } else { %>
         <% for(mod of modules) {%>
             <div class="mod">
-                <h4 class="content"> <a> <%= mod.module %> </a> </h4>
-                <form method="mod" action="/mod/<%= mod.id %>?_method=DELETE">
+                <h4 class="content"><form action="/mod/<%= mod.mod_id %>" method="GET"> <button type="submit"><%= mod.module %></button> </form> </h4>
+                <form method="post" action="/mod/<%= mod.id %>?_method=DELETE">
                     <button>Delete Module</button>
                 </form>
+                <hr>
             </div>
             <% } %>
     <% } %>
