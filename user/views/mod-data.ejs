@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Questions in Module: <%= modulename %></title>
+    <link rel="stylesheet" href="page1.css">
+</head>
+<body>
+    <h1>Module: <%= modulename %></h1>
+
+    <!-- Logout Button -->
+    <form action="/logout?_method=DELETE" method="post">
+        <button type="submit">Logout</button>
+    </form>
+
+    <!-- Questions List -->
+    <% if (rows.length === 0) { %>
+        <p>No Questions found.</p>
+    <% } else { %>
+        <% rows.forEach(question => { %>
+            <div class="mod">
+                <!-- Display Question Content -->
+                <h4 class="content">
+                    <%= question.question %>
+                </h4>
+                
+                <!-- Display Options -->
+                <ul>
+                    <li><%= question.option_1 %></li>
+                    <li><%= question.option_2 %></li>
+                    <li><%= question.option_3 %></li>
+                    <li><%= question.option_4 %></li>
+                </ul>
+
+                <!-- Delete Question Form -->
+                <form method="post" action="/mod/<%= id %>?_method=DELETE">
+                    <button type="submit">Delete Question</button>
+                </form>
+                <hr>
+            </div>
+        <% }); %>
+    <% } %>
+
+    <!-- Create New Question Button -->
+    <form action="/new_ques/<%= id %>" method="get">
+        <button type="submit">Create New Question</button>
+    </form>
+</body>
+</html>

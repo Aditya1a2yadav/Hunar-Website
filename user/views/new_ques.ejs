@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Question</title>
+</head>
+<body>
+    <h1>Create a New Question for Module: <%= modulename %></h1>
+    <form method="post" action="/mod/<%= id %>/add_question">
+        <textarea name="content" cols="30" rows="10" placeholder="Write Your Question" required></textarea><br>
+        <input type="text" name="option_1" placeholder="Option 1" required><br>
+        <input type="text" name="option_2" placeholder="Option 2" required><br>
+        <input type="text" name="option_3" placeholder="Option 3" required><br>
+        <input type="text" name="option_4" placeholder="Option 4" required><br>
+        <input type="text" name="correct_option" placeholder="Correct Option" required><br>
+        <input type="number" name="standard" placeholder="Standard (e.g., Grade)" required><br>
+
+        <label>Difficulty:</label><br>
+        <input type="radio" name="difficulty" value="Easy" id="easy" required>
+        <label for="easy">Easy</label><br>
+        <input type="radio" name="difficulty" value="Medium" id="medium">
+        <label for="medium">Medium</label><br>
+        <input type="radio" name="difficulty" value="Hard" id="hard">
+        <label for="hard">Hard</label><br>
+
+        <button type="submit">Submit Question</button>
+    </form>
+</body>
+</html>
