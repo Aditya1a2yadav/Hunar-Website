@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= module.module %> Quiz</title>
+    <link rel="stylesheet" href="page1.css">
+</head>
+<body>
+    <div class="header">
+        <h2>Module: <%= module.module %></h2>
+        <p>Welcome to the quiz for the selected module. Ready to test your knowledge?</p>
+        <form id="quizForm" action="/mod/<%= mod_id %>/<%= user_id %>/quiz" method="POST">
+            <button type="button" onclick="confirmStart()">Start Quiz</button>
+        </form>
+    </div>
+
+    <script>
+        function confirmStart() {
+            const userConfirmed = confirm(
+                "You need to attempt this test in one go. If you go back or close the window, it will be auto-submitted. Do you want to proceed?"
+            );
+            if (userConfirmed) {
+                // Submit the form if the user confirms
+                document.getElementById('quizForm').submit();
+            }
+        }
+    </script>
+</body>
+</html>

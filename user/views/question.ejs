@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= moduleName %> - Quiz
+  </title>
+</head>
+
+<body>
+  <h1>Module: <%= moduleName %>
+  </h1>
+  <% if(question) {%>
+    <h2>Question <%= currentPage %>:</h2>
+    <% } %>
+
+      <% if (question) { %>
+        <form method="POST">
+          <input type="hidden" name="user_id" value="<%= user_id %>">
+          <input type="hidden" name="mod_id" value="<%= mod_id %>">
+          <input type="hidden" name="quiz_id" value="<%= quiz_id %>">
+          <input type="hidden" name="ques_id" value="<%= question.ques_id %>">
+          <input type="hidden" name="currentPage" value="<%= currentPage %>">
+
+          <!-- Display difficulty level -->
+          <p><strong>Difficulty Level:</strong>
+            <%= difficulty %>
+          </p>
+
+          <p>
+            <%= question.question %>
+          </p>
+
+          <% if (options && options.length> 0) { %>
+            <% options.forEach(option=> { %>
+              <div>
+                <input type="radio" name="user_answer" value="<%= option.option_id %>"
+                  id="option_<%= option.option_id %>" required>
+                <label for="option_<%= option.option_id %>">
+                  <%= option.option_text %>
+                </label>
+              </div>
+              <% }) %>
+                <% } else { %>
+                  <p>No options available for this question.</p>
+                  <% } %>
+                    <div>
+                      <% if (currentPage> 1) { %>
+                        <button type="submit" formaction="/quiz/submit/question/<%= currentPage - 1 %>">Previous
+                          Question</button>
+                        <% } %>
+
+                          <% if (hasNextPage) { %>
+                            <button type="submit" formaction="/quiz/submit/question/<%= currentPage + 1 %>">Next
+                              Question</button>
+                            <% } else { %>
+                              <p>This is the last Question!</p>
+                              <button type="submit" formaction="/quiz/submit/question/<%= currentPage+1%>">Submit
+                                Answer</button>
+                              <% } %>
+                    </div>
+        </form>
+        <% } else { %>
+          <p>Click Finish</p>
+          <form action="/mod/<%= mod_id %>/<%= user_id %>/<%= quiz_id %>/result">
+            <button type="submit">Finish</button>
+          </form>
+          <% } %>
+</body>
+
+</html>

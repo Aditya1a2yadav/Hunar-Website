@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz Result</title>
+</head>
+<body>
+  <h1>Quiz Result</h1>
+
+  <p><strong>User ID:</strong> <%= user_id %></p>
+  <p><strong>Module:</strong> <%= moduleName %></p>
+
+  <h2>Your Answers</h2>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>Question</th>
+        <th>Options</th>
+        <th>Your Answer</th>
+        <th>Correct Answer</th>
+        <th>Difficulty</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% answers.forEach(answer => { %>
+        <tr>
+          <td><%= answer.question %></td>
+          <td>
+            <ul>
+              <li><%= answer.option_1 %></li>
+              <li><%= answer.option_2 %></li>
+              <li><%= answer.option_3 %></li>
+              <li><%= answer.option_4 %></li>
+            </ul>
+          </td>
+          <td><%= answer.user_option %></td>
+          <td><%= answer.is_correct ? 'Correct' : 'Incorrect' %></td>
+          <td><%= answer.difficulty %></td>
+          <td><%= answer.is_correct ? (answer.difficulty == 'Easy' ? 10 : answer.difficulty == 'Medium' ? 20 : 30) : 0 %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  
+  <p><strong>Correct Answers:</strong> <%= correctAnswers %> / <%= totalQuestions %></p>
+  <p><strong>Final Score:</strong> <%= score %> / <%= total %></p>
+
+  <a href="/">Start a New Quiz</a>
+</body>
+</html>

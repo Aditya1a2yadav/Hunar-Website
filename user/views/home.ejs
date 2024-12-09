@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Modules</title>
+    <link rel="stylesheet" href="page1.css">
+</head>
+<body>
+    <div class="header">
+        Hello, <%= name %>!
+        <form action="/logout?_method=DELETE" method="post">
+            <button type="submit">Logout</button>
+        </form>
+    </div>
+
+    <% if (modules.length === 0) { %>
+        <p>No modules found.</p>
+    <% } else { %>
+        <% for(mod of modules) { %>
+            <div class="mod">
+                <h4 class="content">
+                    <form action="/mod/<%= mod.mod_id %>/<%= user_id %>/quiz" method="GET">
+                        <button type="submit"><%= mod.module %></button>
+                    </form>
+                </h4>
+                <hr>
+            </div>
+        <% } %>
+    <% } %>
+
+    <script>
+        const displayWelcomeMessageOnce = () => {
+            const hasVisited = localStorage.getItem('hasVisitedModulesPage');
+    
+            if (!hasVisited) {
+                localStorage.setItem('hasVisitedModulesPage', 'true');
+
+                // Function to speak the welcome message
+                const speakMessage = () => {
+                    const message = 'Select any module for test! All the best.';
+                    const speech = new SpeechSynthesisUtterance(message);
+                    speech.lang = 'en-US';
+                    window.speechSynthesis.speak(speech);
+                };
+
+                // Attempt autoplay
+                try {
+                    speakMessage();
+                } catch (err) {
+                    console.log("Autoplay blocked. Waiting for user interaction.");
+                    // Add click listener to trigger speech if autoplay is blocked
+                    const handleUserClick = () => {
+                        speakMessage();
+                        document.body.removeEventListener('click', handleUserClick);
+                    };
+                    document.body.addEventListener('click', handleUserClick);
+                }
+            }
+        };
+    
+        // Call the function when the page loads
+        window.addEventListener('load', displayWelcomeMessageOnce);
+    </script>
+</body>
+</html>

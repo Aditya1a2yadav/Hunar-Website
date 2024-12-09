@@ -4,7 +4,7 @@ const mysql = require("mysql2");
 // Pass the MySQL connection to the config
 function initialize(passport, getUserByEmail, getUserById) {
   const authenticateUser = (email, password, done) => {
-    const query = 'SELECT * FROM admin WHERE email = ?';
+    const query = 'SELECT * FROM user WHERE email = ?';
     // console.log("yaha____")
     
     db.query(query, [email], (err, results) => {
@@ -32,10 +32,10 @@ function initialize(passport, getUserByEmail, getUserById) {
   passport.use(new LocalStrategy({ usernameField: 'email' }, authenticateUser));
 
   // Serialize and deserialize users
-  passport.serializeUser((user, done) => done(null, user.adm_id));
+  passport.serializeUser((user, done) => done(null, user.user_id));
   
   passport.deserializeUser((id, done) => {
-    const query = 'SELECT * FROM admin WHERE adm_id = ?';
+    const query = 'SELECT * FROM user WHERE user_id = ?';
     
     db.query(query, [id], (err, results) => {
       if (err) return done(err);
