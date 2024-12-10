@@ -7,6 +7,9 @@
 </head>
 <body>
     <h1>Create a New Question for Module: <%= modulename %></h1>
+    <form action="/" >
+        <button type="submit">All Modules</button>
+    </form>
     <form method="post" action="/mod/<%= id %>/add_question">
         <textarea name="content" cols="30" rows="10" placeholder="Write Your Question" required></textarea><br>
         <input type="text" name="option_1" placeholder="Option 1" required><br>

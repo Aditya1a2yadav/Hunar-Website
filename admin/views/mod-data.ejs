@@ -13,7 +13,14 @@
     <form action="/logout?_method=DELETE" method="post">
         <button type="submit">Logout</button>
     </form>
+    <form action="/" >
+        <button type="submit">All Modules</button>
+    </form>
 
+    <!-- Create New Question Button -->
+    <form action="/new_ques/<%= id %>" method="get">
+        <button type="submit">Create New Question</button>
+    </form>
     <!-- Questions List -->
     <% if (rows.length === 0) { %>
         <p>No Questions found.</p>
@@ -42,9 +49,6 @@
         <% }); %>
     <% } %>
 
-    <!-- Create New Question Button -->
-    <form action="/new_ques/<%= id %>" method="get">
-        <button type="submit">Create New Question</button>
-    </form>
+    
 </body>
 </html>
