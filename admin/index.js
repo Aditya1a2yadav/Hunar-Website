@@ -11,6 +11,7 @@ const session = require('express-session');
 const methodOverride = require('method-override');
 const mysql = require("mysql2");
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 const initializePassport = require('./passport-config');
 initializePassport(passport);
@@ -47,7 +48,6 @@ app.use(express.static(path.join(__dirname, "/public/js")));
 app.use(express.static(path.join(__dirname, "/public/stuffs")));
 
 app.get('/', checkAuthenticated, (req, res) => {
-
   const name = req.name;
   const query = 'SELECT * FROM modules';
 
@@ -56,9 +56,6 @@ app.get('/', checkAuthenticated, (req, res) => {
       console.error('Error fetching data from modules table:', err);
       return res.status(500).send('Internal Server Error');
     }
-    // console.log(results[0]);
-
-    // Pass the fetched data to the index.ejs template
     res.render("home.ejs", { modules: results, name: name });
   });
 });
@@ -81,10 +78,6 @@ app.get('/mod/check_name', checkAuthenticated, (req, res) => {
   });
 });
 
-
-const { v4: uuidv4 } = require('uuid'); // Import UUID
-const { name } = require('ejs');
-
 app.post('/mod', checkAuthenticated, (req, res, next) => {
   try {
     const { module_name } = req.body;
@@ -100,29 +93,8 @@ app.post('/mod', checkAuthenticated, (req, res, next) => {
         return next(err);
       }
 
-      const createTableQuery = `
-        CREATE TABLE ${db.escapeId(module_name)} (
-          ques_id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),   -- UUID as primary key
-          question TEXT NOT NULL,                        -- Question text
-          option_1 VARCHAR(255),                         -- Option 1
-          option_2 VARCHAR(255),                         -- Option 2
-          option_3 VARCHAR(255),                         -- Option 3
-          option_4 VARCHAR(255),                         -- Option 4
-          correct_option INT NOT NULL,                   -- Correct option (1, 2, 3, or 4)
-          standard INT NOT NULL,                         -- Standard level (e.g., 10th, 12th)
-          difficulty ENUM('Easy', 'Medium', 'Hard') NOT NULL  -- Difficulty level
-        )
-      `;
-
-      db.query(createTableQuery, (err, result) => {
-        if (err) {
-          console.error('Error creating table:', err);
-          return next(err);
-        }
-
-        console.log(`Table ${module_name} created successfully`);
-        res.redirect('/');
-      });
+      console.log(`Module ${module_name} created successfully`);
+      res.redirect('/');
     });
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -146,90 +118,164 @@ app.delete('/mod/:id/delete', checkAuthenticated, (req, res, next) => {
     }
 
     const moduleName = results[0].module;
-    const deleteTableQuery = `DROP TABLE IF EXISTS ${db.escapeId(moduleName)}`;
     const deleteModuleQuery = 'DELETE FROM modules WHERE mod_id = ?';
-
-    db.query(deleteTableQuery, (err) => {
+    
+    // First, find all question IDs for this module to delete their options
+    const findQuestionsQuery = 'SELECT ques_id FROM questions WHERE moduleName = ?';
+    
+    db.query(findQuestionsQuery, [moduleName], (err, questionResults) => {
       if (err) {
-        console.error('Error deleting module table:', err);
+        console.error('Error finding questions:', err);
         return next(err);
       }
 
-      db.query(deleteModuleQuery, [id], (err) => {
-        if (err) {
-          console.error('Error deleting module record:', err);
-          return next(err);
-        }
+      // Extract question IDs
+      const questionIds = questionResults.map(q => q.ques_id);
 
-        console.log(`Module ${moduleName} and its table deleted successfully`);
-        res.redirect('/');
-      });
+      // Delete options for all questions in this module
+      const deleteOptionsQuery = 'DELETE FROM options WHERE ques_id IN (?)';
+      
+      if (questionIds.length > 0) {
+        db.query(deleteOptionsQuery, [questionIds], (err) => {
+          if (err) {
+            console.error('Error deleting options:', err);
+            return next(err);
+          }
+
+          // Delete questions for this module
+          const deleteQuestionsQuery = 'DELETE FROM questions WHERE moduleName = ?';
+          db.query(deleteQuestionsQuery, [moduleName], (err) => {
+            if (err) {
+              console.error('Error deleting questions:', err);
+              return next(err);
+            }
+
+            // Delete the module itself
+            db.query(deleteModuleQuery, [id], (err) => {
+              if (err) {
+                console.error('Error deleting module record:', err);
+                return next(err);
+              }
+
+              console.log(`Module ${moduleName} and its questions and options deleted successfully`);
+              res.redirect('/');
+            });
+          });
+        });
+      } else {
+        // If no questions, directly delete the module
+        db.query(deleteModuleQuery, [id], (err) => {
+          if (err) {
+            console.error('Error deleting module record:', err);
+            return next(err);
+          }
+
+          console.log(`Module ${moduleName} deleted successfully`);
+          res.redirect('/');
+        });
+      }
     });
   });
 });
-
-
 
 app.get('/mod/:id', checkAuthenticated, (req, res, next) => {
   const { id } = req.params;
-  const getModuleQuery = 'SELECT module FROM modules WHERE mod_id = ?';
+  
+  // Fetch module details and questions with dynamic options
+  const moduleQuery = `
+    SELECT m.mod_id, m.module, 
+           (SELECT MAX(option_number) 
+            FROM options o 
+            JOIN questions q ON o.ques_id = q.ques_id 
+            WHERE q.moduleName = m.module) as max_options
+    FROM modules m
+    WHERE m.mod_id = ?
+  `;
 
-  db.query(getModuleQuery, [id], (err, results) => {
+  db.query(moduleQuery, [id], (err, moduleResults) => {
     if (err) {
-      console.error('Error fetching module name:', err);
+      console.error('Error fetching module details:', err);
       return next(err);
     }
 
-    if (results.length === 0) {
+    if (moduleResults.length === 0) {
       return res.status(404).send('Module not found');
     }
 
-    const modulename = results[0].module;
-    const fetchRowsQuery = `SELECT * FROM ${db.escapeId(modulename)}`;
+    const modulename = moduleResults[0].module;
+    const maxOptions = moduleResults[0].max_options || 4;
 
-    db.query(fetchRowsQuery, (err, rows) => {
+    // Dynamically build SQL query for options
+    const optionsSelect = Array.from(
+      { length: maxOptions }, 
+      (_, i) => `o${i + 1}.option_text AS option_${i + 1}`
+    ).join(', ');
+
+    const optionsJoins = Array.from(
+      { length: maxOptions }, 
+      (_, i) => `LEFT JOIN options o${i + 1} ON q.ques_id = o${i + 1}.ques_id AND o${i + 1}.option_number = ${i + 1}`
+    ).join('\n');
+
+    const fetchQuestionsQuery = `
+      SELECT q.*, 
+             ${optionsSelect}
+      FROM questions q
+      ${optionsJoins}
+      WHERE q.moduleName = ?
+    `;
+
+    db.query(fetchQuestionsQuery, [modulename], (err, questions) => {
       if (err) {
-        console.error('Error fetching rows from table:', err);
-        return next(err)
+        console.error('Error fetching questions:', err);
+        return next(err);
       }
+
       res.render('mod-data.ejs', {
         modulename,
-        rows,
-        id
+        id,
+        rows:questions,
+        maxOptions
       });
     });
   });
 });
-// delete questoins
 
+// Delete Question Route
 app.delete('/mod/:mod_id/question/:q_id/delete', checkAuthenticated, (req, res, next) => {
   const moduleId = req.params.mod_id;  
   const questionId = req.params.q_id;    
 
   const getModuleNameQuery = 'SELECT module FROM modules WHERE mod_id = ?';
   connection.query(getModuleNameQuery, [moduleId], (err, results) => {
+    if (err) {
+      console.error('Error fetching module name:', err);
+      return res.status(500).send('Error fetching module name');
+    }
+
+    if (results.length === 0) {
+      return res.status(404).send('Module not found');
+    }
+
+    // Delete associated options first
+    const deleteOptionsQuery = 'DELETE FROM options WHERE ques_id = ?';
+    connection.query(deleteOptionsQuery, [questionId], (err) => {
       if (err) {
-          console.error('Error fetching module name:', err);
-          return res.status(500).send('Error fetching module name');
+        console.error('Error deleting options:', err);
+        return res.status(500).send('Error deleting options');
       }
 
-      if (results.length === 0) {
-          return res.status(404).send('Module not found');
-      }
-
-      const moduleName = results[0].module;
-
-      // Dynamically build the query to delete from the correct table
-      const deleteQuestionQuery = `DELETE FROM ${moduleName} WHERE id = ?`;
+      // Then delete the question
+      const deleteQuestionQuery = 'DELETE FROM questions WHERE ques_id = ?';
       connection.query(deleteQuestionQuery, [questionId], (err, result) => {
-          if (err) {
-              console.error('Error deleting question:', err);
-              return res.status(500).send('Error deleting question');
-          }
+        if (err) {
+          console.error('Error deleting question:', err);
+          return res.status(500).send('Error deleting question');
+        }
 
-          console.log(`Question ${questionId} is deleted from ${moduleName}`);
-          res.redirect(`/mod/${moduleId}`);
+        console.log(`Question ${questionId} and its options are deleted`);
+        res.redirect(`/mod/${moduleId}`);
       });
+    });
   });
 });
 
@@ -247,8 +293,8 @@ app.get('/new_ques/:id', checkAuthenticated, (req, res, next) => {
     if (results.length === 0) {
       return res.status(404).send('Module not found');
     }
-    const modulename = results[0].module;
-    res.render('new_ques.ejs', { id, modulename });
+    const moduleName = results[0].module;
+    res.render('new_ques.ejs', { mod_id: id, moduleName });
   });
 });
 
@@ -256,14 +302,24 @@ app.post('/mod/:id/add_question', checkAuthenticated, (req, res, next) => {
   const { id } = req.params;
   const {
     content,
-    option_1,
-    option_2,
-    option_3,
-    option_4,
     correct_option,
     standard,
     difficulty,
+    ...options // Capture all additional keys as options
   } = req.body;
+
+  // Extract options dynamically based on keys like option_1, option_2, etc.
+  const optionKeys = Object.keys(options).filter(key => key.startsWith('option_'));
+  if (optionKeys.length === 0) {
+    return res.status(400).send('At least one option is required');
+  }
+  console.log(optionKeys);
+
+  const optionsValues = optionKeys.map((key, index) => [
+    null, // ques_id will be added later dynamically
+    index + 1,
+    options[key],
+  ]);
 
   const getModuleQuery = 'SELECT module FROM modules WHERE mod_id = ?';
 
@@ -278,52 +334,69 @@ app.post('/mod/:id/add_question', checkAuthenticated, (req, res, next) => {
     }
 
     const modulename = results[0].module;
+    const ques_id = uuidv4(); // Generate UUID for question
+
+    // Insert question
     const insertQuestionQuery = `
-      INSERT INTO ${db.escapeId(modulename)} 
-      (question, option_1, option_2, option_3, option_4,correct_option, standard, difficulty) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO questions 
+      (ques_id, question, moduleName, correct_option, standard, difficulty) 
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    const values = [
+    const questionValues = [
+      ques_id,
       content,
-      option_1,
-      option_2,
-      option_3,
-      option_4,
+      modulename,
       correct_option,
       standard,
       difficulty,
     ];
 
-    db.query(insertQuestionQuery, values, (err, result) => {
+    db.query(insertQuestionQuery, questionValues, (err, result) => {
       if (err) {
         console.error('Error inserting question:', err);
         return next(err);
       }
 
-      console.log('Question added successfully:', result);
-      res.redirect(`/mod/${id}`);
+      // Update ques_id in optionsValues
+      const updatedOptionsValues = optionsValues.map(option => [
+        ques_id,
+        ...option.slice(1), // Keep option_number and option_text
+      ]);
+
+      // Insert options
+      const insertOptionsQuery = `
+        INSERT INTO options 
+        (ques_id, option_number, option_text) 
+        VALUES ?
+      `;
+
+      db.query(insertOptionsQuery, [updatedOptionsValues], (err, result) => {
+        if (err) {
+          console.error('Error inserting options:', err);
+          return next(err);
+        }
+
+        console.log('Question and options added successfully');
+        res.redirect(`/mod/${id}`);
+      });
     });
   });
 });
 
-
-
+// Login and Authentication routes remain the same as in the previous version
 app.get('/login', checkNotAuthenticated, (req, res) => {
   res.render('login.ejs');
 });
 
 app.post('/login', checkNotAuthenticated, (req, res, next) => {
   console.log('Login Form Data:', req.body);
-  // Proceed to Passport authentication
   next();
 }, passport.authenticate('local', {
   successRedirect: '/',
   failureRedirect: '/login',
   failureFlash: true
 }));
-
-
 
 app.delete('/logout', (req, res) => {
   req.logOut((err) => {
@@ -333,7 +406,6 @@ app.delete('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
-
 
 function checkAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
@@ -349,6 +421,6 @@ function checkNotAuthenticated(req, res, next) {
   next();
 }
 
-app.listen(3000, () => {
-  console.log('Server started on http://localhost:3000');
+app.listen(3003, () => {
+  console.log('Server started on http://localhost:3003');
 });

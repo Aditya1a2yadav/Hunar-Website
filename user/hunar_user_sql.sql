@@ -28,9 +28,9 @@ insert into user (name,email,password) value("aditya","aditya@gmail","12345")
 select * from modules
 
 CREATE TABLE quizzes (
-    quiz_id VARCHAR(36) PRIMARY KEY,                 -- UUID for quiz identification
-    user_id VARCHAR(36) NOT NULL,                   -- ID of the user
-    mod_id VARCHAR(36) NOT NULL,                    -- Module ID
+    quiz_id VARCHAR(225) PRIMARY KEY,                 -- UUID for quiz identification
+    user_id VARCHAR(225) NOT NULL,                   -- ID of the user
+    mod_id VARCHAR(225) NOT NULL,                    -- Module ID
     moduleName VARCHAR(255) NOT NULL,              -- Name of the module
     user_score INT DEFAULT 0,                       -- User's score (default to 0)
     total_score INT DEFAULT 0,                      -- Total score (default to 0)
@@ -49,6 +49,8 @@ CREATE TABLE answers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,       -- Timestamp for when the answer is recorded
     UNIQUE KEY unique_answer (quiz_id, user_id, question_id, mod_id) -- Unique constraint with mod_id
 );
+
+
 
 
 

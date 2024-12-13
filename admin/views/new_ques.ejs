@@ -2,32 +2,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create New Question</title>
+    <title>Add Question</title>
+    <style>
+        .option-container {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .remove-option {
+            margin-left: 10px;
+            color: red;
+            cursor: pointer;
+        }
+        #options-wrapper {
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Create a New Question for Module: <%= modulename %></h1>
-    <form action="/" >
-        <button type="submit">All Modules</button>
-    </form>
-    <form method="post" action="/mod/<%= id %>/add_question">
-        <textarea name="content" cols="30" rows="10" placeholder="Write Your Question" required></textarea><br>
-        <input type="text" name="option_1" placeholder="Option 1" required><br>
-        <input type="text" name="option_2" placeholder="Option 2" required><br>
-        <input type="text" name="option_3" placeholder="Option 3" required><br>
-        <input type="text" name="option_4" placeholder="Option 4" required><br>
-        <input type="text" name="correct_option" placeholder="Correct Option" required><br>
-        <input type="number" name="standard" placeholder="Standard (e.g., Grade)" required><br>
+    <h1>Add Question to Module: <%= moduleName %></h1>
+    
+    <form action="/mod/<%= mod_id %>/add_question" method="POST" id="questionForm">
+        <!-- Question Content -->
+        <div>
+            <label for="content">Question Content:</label>
+            <textarea name="content" id="content" required rows="4" cols="70"></textarea>
+        </div>
 
-        <label>Difficulty:</label><br>
-        <input type="radio" name="difficulty" value="Easy" id="easy" required>
-        <label for="easy">Easy</label><br>
-        <input type="radio" name="difficulty" value="Medium" id="medium">
-        <label for="medium">Medium</label><br>
-        <input type="radio" name="difficulty" value="Hard" id="hard">
-        <label for="hard">Hard</label><br>
+        <!-- Standard Selection -->
+        <div>
+            <label for="standard">Standard:</label>
+            <input type="text" name="standard" id="standard" required>
+        </div>
 
-        <button type="submit">Submit Question</button>
+        <!-- Difficulty Selection -->
+        <div>
+            <label for="difficulty">Difficulty:</label>
+            <select name="difficulty" id="difficulty" required>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+
+        <!-- Options Wrapper -->
+        <div id="options-wrapper">
+            <h3>Options</h3>
+            <div id="options-container">
+                <!-- Initial Options -->
+                <div class="option-container" data-option-number="1">
+                    <label>Option 1:</label>
+                    <input type="text" name="option_1" required>
+                    <input type="radio" name="correct_option" value="1" required>
+                    <span class="remove-option" onclick="removeOption(this)">Remove</span>
+                </div>
+                <div class="option-container" data-option-number="2">
+                    <label>Option 2:</label>
+                    <input type="text" name="option_2" required>
+                    <input type="radio" name="correct_option" value="2" required>
+                    <span class="remove-option" onclick="removeOption(this)">Remove</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Option Button -->
+        <button type="button" id="add-option-btn" onclick="addOption()">Add Option</button>
+
+        <!-- Submit Button -->
+        <div>
+            <button type="submit">Save Question</button>
+        </div>
     </form>
+
+    <script>
+        let optionCount = 2;
+
+        function addOption() {
+            if (optionCount >= 6) {
+                alert('Maximum of 6 options allowed');
+                return;
+            }
+
+            optionCount++;
+            const container = document.getElementById('options-container');
+            const newOptionDiv = document.createElement('div');
+            newOptionDiv.className = 'option-container';
+            newOptionDiv.dataset.optionNumber = optionCount;
+            
+            newOptionDiv.innerHTML = `
+                <label>Option ${optionCount}:</label>
+                <input type="text" name="option_${optionCount}" required>
+                <input type="radio" name="correct_option" value="${optionCount}" required>
+                <span class="remove-option" onclick="removeOption(this)">Remove</span>
+            `;
+            
+            container.appendChild(newOptionDiv);
+        }
+
+        function removeOption(removeBtn) {
+            const optionContainer = removeBtn.closest('.option-container');
+            
+            // Prevent removing if less than 2 options
+            const currentOptions = document.querySelectorAll('.option-container');
+            if (currentOptions.length <= 2) {
+                alert('At least 2 options are required');
+                return;
+            }
+
+            optionContainer.remove();
+            reindexOptions();
+        }
+
+        function reindexOptions() {
+            const optionContainers = document.querySelectorAll('.option-container');
+            
+            // Reset optionCount to the current number of options
+            optionCount = optionContainers.length;
+
+            optionContainers.forEach((container, index) => {
+                const optionNumber = index + 1;
+                container.dataset.optionNumber = optionNumber;
+                
+                const label = container.querySelector('label');
+                label.textContent = `Option ${optionNumber}:`;
+                
+                const textInput = container.querySelector('input[type="text"]');
+                textInput.name = `option_${optionNumber}`;
+                
+                const radioInput = container.querySelector('input[type="radio"]');
+                radioInput.value = optionNumber;
+            });
+        }
+    </script>
 </body>
 </html>

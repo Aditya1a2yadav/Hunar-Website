@@ -16,9 +16,9 @@
     <thead>
       <tr>
         <th>Question</th>
-        <th>Options</th>
-        <th>Your Answer</th>
-        <th>Correct Answer</th>
+        <!-- <th>Options</th> -->
+        <th>Your Option</th>
+        <th>Correctness</th>
         <th>Difficulty</th>
         <th>Score</th>
       </tr>
@@ -27,14 +27,7 @@
       <% answers.forEach(answer => { %>
         <tr>
           <td><%= answer.question %></td>
-          <td>
-            <ul>
-              <li><%= answer.option_1 %></li>
-              <li><%= answer.option_2 %></li>
-              <li><%= answer.option_3 %></li>
-              <li><%= answer.option_4 %></li>
-            </ul>
-          </td>
+          
           <td><%= answer.user_option %></td>
           <td><%= answer.is_correct ? 'Correct' : 'Incorrect' %></td>
           <td><%= answer.difficulty %></td>

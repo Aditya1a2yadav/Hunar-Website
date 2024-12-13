@@ -1,54 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Questions in Module: <%= modulename %></title>
-    <link rel="stylesheet" href="page1.css">
+    <title><%= modulename %> Questions</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
-    <h1>Module: <%= modulename %></h1>
+    <h1><%= modulename %> Module Questions</h1>
+    <form action="/new_ques/<%= id %>"><button type="submit">Add New Question</button></form>
 
-    <!-- Logout Button -->
-    <form action="/logout?_method=DELETE" method="post">
-        <button type="submit">Logout</button>
-    </form>
-    <form action="/" >
-        <button type="submit">All Modules</button>
-    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>Question</th>
+                <th>Standard</th>
+                <th>Difficulty</th>
+                <th>Options</th>
+                <th>Correct Option</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% rows.forEach(function(question) { %>
+                <tr>
+                    <td><%= question.question %></td>
+                    <td><%= question.standard %></td>
+                    <td><%= question.difficulty %></td>
+                    
+                    <td>
+                        <ul>
+                            <% Object.keys(question).forEach(function(key) { 
+                                if (key.startsWith('option_')) { %>
+                                    <li><strong><%= key.replace('option_', 'Option ') %>:</strong> <%= question[key] %></li>
+                            <% } }); %>
+                        </ul>
+                    </td>
 
-    <!-- Create New Question Button -->
-    <form action="/new_ques/<%= id %>" method="get">
-        <button type="submit">Create New Question</button>
-    </form>
-    <!-- Questions List -->
-    <% if (rows.length === 0) { %>
-        <p>No Questions found.</p>
-    <% } else { %>
-        <% rows.forEach(question => { %>
-            <div class="mod">
-                <!-- Display Question Content -->
-                <h4 class="content">
-                    <%= question.question %>
-                </h4>
-                
-                <!-- Display Options -->
-                <ul>
-                    <li><%= question.option_1 %></li>
-                    <li><%= question.option_2 %></li>
-                    <li><%= question.option_3 %></li>
-                    <li><%= question.option_4 %></li>
-                </ul>
-
-                <!-- Delete Question Form -->
-                <form method="post" action="/mod/<%= id %>?_method=DELETE">
-                    <button type="submit">Delete Question</button>
-                </form>
-                <hr>
-            </div>
-        <% }); %>
-    <% } %>
-
-    
+                    <td><%= question.correct_option %></td>
+                    <td>
+                        <form action="/mod/<%= id %>/question/<%= question.ques_id %>/delete?_method=DELETE" method="POST" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
 </body>
 </html>
